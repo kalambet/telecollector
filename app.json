@@ -1,0 +1,11 @@
+{
+  "name": "Telegram Collector Bot",
+  "description": "Telegram bot for collecting and storing messages",
+  "keywords": [
+    "telegram",
+    "bot"
+  ],
+  "website": "http://github.com/kalambet/telecollector",
+  "repository": "http://github.com/kalambet/telecollector"
+}
+
