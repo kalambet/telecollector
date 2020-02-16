@@ -13,22 +13,27 @@ type MessageService interface {
 }
 
 func NewMessage(upd *telegram.Update) *Message {
-	log.Printf("Update recived from telegram bot: \n%#v\n\n", *upd)
+	log.Printf("Update recived from telegram bot:\n%#v\n\n", *upd)
 
+	var msg *telegram.Message
 	if upd.Message != nil {
-		log.Printf("Message recived from telegram bot: \n%#v", *upd.Message)
+		log.Printf("Message recived from telegram bot:\n%#v", *upd.Message)
+		msg = upd.Message
 	}
-
 	if upd.EditedMessage != nil {
-		log.Printf("EditedMessage recived from telegram bot: \n%#v", *upd.EditedMessage)
+		log.Printf("EditedMessage recived from telegram bot:\n%#v", *upd.EditedMessage)
+		msg = upd.EditedMessage
 	}
-
 	if upd.ChannelPost != nil {
-		log.Printf("ChannelPost recived from telegram bot: \n%#v", *upd.ChannelPost)
+		log.Printf("ChannelPost recived from telegram bot:\n%#v", *upd.ChannelPost)
+		msg = upd.ChannelPost
 	}
-
 	if upd.EditedChannelPost != nil {
-		log.Printf("EditedChannelPost recived from telegram bot: \n%#v", *upd.EditedChannelPost)
+		log.Printf("EditedChannelPost recived from telegram bot:\n%#v", *upd.EditedChannelPost)
+		msg = upd.EditedChannelPost
+	}
+	if msg != nil {
+		log.Printf("Chat recived from telegram bot:\n%#v", *msg.Chat)
 	}
 
 	return &Message{}
