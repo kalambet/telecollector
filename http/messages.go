@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/kalambet/telecollector/telecollector"
+
+	"github.com/kalambet/telecollector/telegram"
 )
 
 func (s *server) handleMessage() http.HandlerFunc {
@@ -16,14 +18,14 @@ func (s *server) handleMessage() http.HandlerFunc {
 		}
 
 		d := json.NewDecoder(r.Body)
-		var upd telecollector.Update
+		var upd telegram.Update
 		err := d.Decode(&upd)
 		if err != nil {
 			s.respond(w, http.StatusNotAcceptable, "Sent entity is not update")
 			return
 		}
 
-		err = s.msgService.Save(upd.Message())
+		err = s.msgService.Save(telecollector.NewMessage(&upd))
 		if err != nil {
 			log.Printf("server: error saving message: %s", err.Error())
 			s.respond(w, http.StatusInternalServerError, "Error saving message")

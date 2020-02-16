@@ -1,16 +1,19 @@
 package telecollector
 
-type Message struct{}
+import (
+	"log"
 
-type Update struct {
-	UpdaterId int       `json:"update_id"`
-	Message   TGMessage `json:"message"`
-}
+	"github.com/kalambet/telecollector/telegram"
+)
+
+type Message struct{}
 
 type MessageService interface {
 	Save(*Message) error
 }
 
-func (u *Update) Message() *Message {
-	return nil
+func NewMessage(upd *telegram.Update) *Message {
+	log.Printf("Update recived from telegram bot: \n%#v\n\n", *upd)
+	log.Printf("Message recived from telegram bot: \n%#v", *upd.Message)
+	return &Message{}
 }

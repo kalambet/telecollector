@@ -1,10 +1,10 @@
 package store
 
-import "github.com/kalambet/telecollector/telecollector"
-
-type service struct {
-}
+import (
+	"github.com/kalambet/telecollector/store/postgres"
+	"github.com/kalambet/telecollector/telecollector"
+)
 
 func NewMessagesService() (telecollector.MessageService, error) {
-	return nil, nil
+	return postgres.NewMessagesService(), nil
 }
