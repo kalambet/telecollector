@@ -34,6 +34,12 @@ func NewMessage(upd *telegram.Update) *Message {
 	}
 	if msg != nil {
 		log.Printf("Chat recived from telegram bot:\n%#v", *msg.Chat)
+
+		if msg.Entities != nil {
+			for _, e := range msg.Entities {
+				log.Printf("Entity: %#v\n", e)
+			}
+		}
 	}
 
 	return &Message{}

@@ -3,23 +3,41 @@ package telegram
 import "encoding/json"
 
 type Chat struct {
-	ID        int64  `json:"id"`
-	Type      string `json:"type"`
-	Title     string `json:"title"`
-	UserName  string `json:"username"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID               int64            `json:"id"`
+	Type             string           `json:"type"`
+	Title            string           `json:"title,omitempty"`
+	UserName         string           `json:"username,omitempty"`
+	FirstName        string           `json:"first_name,omitempty"`
+	LastName         string           `json:"last_name,omitempty"`
+	Photo            *ChatPhoto       `json:"photo,omitempty"`
+	Description      string           `json:"description,omitempty"`
+	InviteLink       string           `json:"invite_link,omitempty"`
+	PinnedMessage    *Message         `json:"pinned_message,omitempty"`
+	Permissions      *ChatPermissions `json:"permissions,omitempty"`
+	SlowModeDelay    int              `json:"slow_mode_delay,omitempty"`
+	StickerSetName   string           `json:"sticker_set_name,omitempty"`
+	CanSetStickerSet bool             `json:"can_set_sticker_set,omitempty"`
 }
 
 type User struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	UserName  string `json:"username"`
+	ID                      int64  `json:"id"`
+	IsBot                   bool   `json:"is_bot"`
+	FirstName               string `json:"first_name"`
+	LastName                string `json:"last_name,omitempty"`
+	UserName                string `json:"username,omitempty"`
+	LanguageCode            string `json:"language_code,omitempty"`
+	CanJoinGroups           bool   `json:"can_join_groups,omitempty"`
+	CanReadAllGroupMessages bool   `json:"can_read_all_group_messages,omitempty"`
+	SupportsInlineQueries   bool   `json:"supports_inline_queries,omitempty"`
 }
 
-type MessageEntities struct {
-	Type string `json:"type"`
+type MessageEntity struct {
+	Type     string `json:"type"`
+	Offset   int    `json:"offset"`
+	Length   int    `json:"length"`
+	URL      string `json:"url,omitempty"`
+	User     *User  `json:"user,omitempty"`
+	Language string `json:"language,omitempty"`
 }
 
 type Location struct {
@@ -27,6 +45,8 @@ type Location struct {
 	Latitude  float64 `json:"latitude"`
 }
 
+type ChatPermissions json.RawMessage
+type ChatPhoto json.RawMessage
 type PhotoSize json.RawMessage
 type Audio json.RawMessage
 type Video json.RawMessage
@@ -66,8 +86,8 @@ type Message struct {
 	MediaGroupID          string                `json:"media_group_id,omitempty"`
 	AuthorSignature       string                `json:"author_signature,omitempty"`
 	Text                  string                `json:"text"`
-	Entities              []*MessageEntities    `json:"entities"`
-	CaptionEntities       []*MessageEntities    `json:"caption_entities"`
+	Entities              []*MessageEntity      `json:"entities"`
+	CaptionEntities       []*MessageEntity      `json:"caption_entities"`
 	Audio                 *Audio                `json:"audio,omitempty"`
 	Document              *Document             `json:"document,omitempty"`
 	Animation             *Animation            `json:"animation,omitempty"`
