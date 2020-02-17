@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -18,16 +17,9 @@ func (s *server) handleMessage() http.HandlerFunc {
 			return
 		}
 
-		badi, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			s.respond(w, http.StatusInternalServerError, "Sent entity is not update")
-			return
-		}
-		log.Printf("%s", badi)
-
 		d := json.NewDecoder(r.Body)
 		var upd telegram.Update
-		err = d.Decode(&upd)
+		err := d.Decode(&upd)
 		if err != nil {
 			s.respond(w, http.StatusNotAcceptable, "Sent entity is not update")
 			return

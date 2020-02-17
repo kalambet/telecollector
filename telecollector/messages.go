@@ -7,25 +7,25 @@ import (
 )
 
 type Message struct {
-	ID       int64     `sql:"message_id"`
-	Text     string    `sql:"text"`
-	Tags     []string  `sql:"tags"`
-	Date     time.Time `sql:"date"`
-	AuthorID int64     `sql:"author_id"`
-	ChatID   int64     `sql:"chat_id"`
+	ID       int64
+	ChatID   int64
+	AuthorID int64
+	Date     time.Time
+	Text     string
+	Tags     []string
 }
 
 type Chat struct {
-	ID        int64  `sql:"author_id"`
-	Messenger string `sql:"messenger"`
-	Name      string `sql:"name"`
+	ID        int64
+	Messenger string
+	Name      string
 }
 
 type Author struct {
-	ID       int64  `sql:"chat_id"`
-	First    string `sql:"first"`
-	Last     string `sql:"last"`
-	Username string `sql:"username"`
+	ID       int64
+	First    string
+	Last     string
+	Username string
 }
 
 type Entry struct {
