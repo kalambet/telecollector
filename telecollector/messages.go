@@ -63,6 +63,10 @@ func NewMessage(upd *telegram.Update) *Message {
 		return nil
 	}
 
+	if msg.From != nil {
+		return nil
+	}
+
 	return &Message{
 		ID:   msg.ID,
 		Text: msg.Text,

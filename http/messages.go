@@ -17,6 +17,8 @@ func (s *server) handleMessage() http.HandlerFunc {
 			return
 		}
 
+		log.Printf("%s", r.Body)
+
 		d := json.NewDecoder(r.Body)
 		var upd telegram.Update
 		err := d.Decode(&upd)
