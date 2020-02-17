@@ -1,10 +1,9 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"os"
-
-	"github.com/lib/pq"
 
 	"github.com/kalambet/telecollector/telecollector"
 	_ "github.com/lib/pq"
@@ -39,15 +38,13 @@ create table chats(
 
 	tableExistenceSQL = `select exists (select from pg_tables where schemaname = 'public' and tablename = $1);`
 
-	insertQuery = `
-begin transaction;
-insert into chats (chat_id, messenger, name) values ($1, $2, $3) on conflict (chat_id) do nothing;
-insert into authors (author_id, first, last, username) values($4, $5, $6, $7) on conflict (author_id) do nothing;
+	insertChatQuery    = `insert into chats (chat_id, messenger, name) values (:chat_id, :messenger, :name) on conflict (chat_id) do nothing;`
+	insertAuthorQuery  = `insert into authors (author_id, first, last, username) values(:author_id, :first, :last, :username) on conflict (author_id) do nothing;`
+	insertMessageQuery = `
 insert into 
     messages (message_id, chat_id, date, text, tags, author_id) 
-    values ($8, $1, $9, $10, $11, $4) 
-    on conflict do update set date = $9, text = $10, tags = $11;
-commit;`
+    values (:message_id, :chat_id, :date, :text, :tags, :author_id) 
+    on conflict do update set date = :date, text = :text, tags = :tags;`
 )
 
 type Service struct {
@@ -115,9 +112,37 @@ func (s *Service) gracefulCreateTable(table string, query string) error {
 	return nil
 }
 
-func (s *Service) Save(msg *telecollector.Message) error {
-	_, err := s.db.Query(insertQuery, msg.Chat.ID, msg.Chat.Messenger, msg.Chat.Name,
-		msg.Author.ID, msg.Author.First, msg.Author.Last, msg.Author.Username,
-		msg.ID, msg.Date, msg.Text, pq.Array(msg.Tags))
-	return err
+func (s *Service) Save(entity *telecollector.Entry) error {
+	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{
+		ReadOnly: false,
+	})
+
+	_, err = tx.Exec(insertChatQuery, entity.Chat)
+	if err != nil {
+		err = tx.Rollback()
+		if err != nil {
+			return err
+		}
+		return err
+	}
+
+	_, err = tx.Exec(insertAuthorQuery, entity.Author)
+	if err != nil {
+		err = tx.Rollback()
+		if err != nil {
+			return err
+		}
+		return err
+	}
+
+	_, err = tx.Exec(insertMessageQuery, entity.Message)
+	if err != nil {
+		err = tx.Rollback()
+		if err != nil {
+			return err
+		}
+		return err
+	}
+
+	return tx.Commit()
 }

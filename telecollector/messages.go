@@ -7,32 +7,38 @@ import (
 )
 
 type Message struct {
-	ID     int64
-	Text   string
-	Tags   []string
-	Date   time.Time
-	Author *Author
-	Chat   *Chat
+	ID       int64     `sql:"message_id"`
+	Text     string    `sql:"text"`
+	Tags     []string  `sql:"tags"`
+	Date     time.Time `sql:"date"`
+	AuthorID int64     `sql:"author_id"`
+	ChatID   int64     `sql:"chat_id"`
 }
 
 type Chat struct {
-	ID        int64
-	Messenger string
-	Name      string
+	ID        int64  `sql:"author_id"`
+	Messenger string `sql:"messenger"`
+	Name      string `sql:"name"`
 }
 
 type Author struct {
-	ID       int64
-	First    string
-	Last     string
-	Username string
+	ID       int64  `sql:"chat_id"`
+	First    string `sql:"first"`
+	Last     string `sql:"last"`
+	Username string `sql:"username"`
+}
+
+type Entry struct {
+	Message Message
+	Author  Author
+	Chat    Chat
 }
 
 type MessageService interface {
-	Save(*Message) error
+	Save(*Entry) error
 }
 
-func NewMessage(upd *telegram.Update) *Message {
+func NewEntry(upd *telegram.Update) *Entry {
 	var msg *telegram.Message
 	if upd.Message != nil {
 		msg = upd.Message
@@ -63,22 +69,32 @@ func NewMessage(upd *telegram.Update) *Message {
 		return nil
 	}
 
-	author := &Author{}
+	author := Author{}
 	if msg.From != nil {
-		author = &Author{
+		author = Author{
 			ID:       msg.From.ID,
 			First:    msg.From.FirstName,
 			Last:     msg.From.LastName,
 			Username: msg.From.UserName,
 		}
+	} else {
+		// Telegram `From` is empty if the message is from Channel
+		author = Author{
+			ID:    0,
+			First: msg.Chat.Title,
+		}
 	}
 
-	return &Message{
-		ID:   msg.ID,
-		Text: msg.Text,
-		Tags: tags,
-		Date: time.Unix(msg.Date, 0),
-		Chat: &Chat{
+	return &Entry{
+		Message: Message{
+			ID:       msg.ID,
+			Text:     msg.Text,
+			Tags:     tags,
+			Date:     time.Unix(msg.Date, 0),
+			ChatID:   msg.Chat.ID,
+			AuthorID: author.ID,
+		},
+		Chat: Chat{
 			ID:        msg.Chat.ID,
 			Messenger: "Telegram",
 			Name:      msg.Chat.Title,
