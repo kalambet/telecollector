@@ -63,8 +63,14 @@ func NewMessage(upd *telegram.Update) *Message {
 		return nil
 	}
 
+	author := &Author{}
 	if msg.From != nil {
-		return nil
+		author = &Author{
+			ID:       msg.From.ID,
+			First:    msg.From.FirstName,
+			Last:     msg.From.LastName,
+			Username: msg.From.UserName,
+		}
 	}
 
 	return &Message{
@@ -77,11 +83,6 @@ func NewMessage(upd *telegram.Update) *Message {
 			Messenger: "Telegram",
 			Name:      msg.Chat.Title,
 		},
-		Author: &Author{
-			ID:       msg.From.ID,
-			First:    msg.From.FirstName,
-			Last:     msg.From.LastName,
-			Username: msg.From.UserName,
-		},
+		Author: author,
 	}
 }
