@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"os"
 
+	"github.com/lib/pq"
+
 	"github.com/kalambet/telecollector/telecollector"
 	_ "github.com/lib/pq"
 )
@@ -116,6 +118,6 @@ func (s *Service) gracefulCreateTable(table string, query string) error {
 func (s *Service) Save(msg *telecollector.Message) error {
 	_, err := s.db.Query(insertQuery, msg.Chat.ID, msg.Chat.Messenger, msg.Chat.Name,
 		msg.Author.ID, msg.Author.First, msg.Author.Last, msg.Author.Username,
-		msg.ID, msg.Date, msg.Text, msg.Tags)
+		msg.ID, msg.Date, msg.Text, pq.Array(msg.Tags))
 	return err
 }
