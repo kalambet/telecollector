@@ -27,9 +27,9 @@ func (s *server) handleMessage() http.HandlerFunc {
 			return
 		}
 
-		msg := telecollector.NewMessage(&upd)
-		if msg != nil {
-			err = s.msgService.Save(msg)
+		entry := telecollector.NewEntry(&upd)
+		if entry != nil {
+			err = s.msgService.Save(entry)
 			if err != nil {
 				log.Printf("server: error saving message: %s", err.Error())
 				s.respond(w, http.StatusInternalServerError, "Error saving message")
