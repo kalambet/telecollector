@@ -6,5 +6,5 @@ import (
 )
 
 func NewMessagesService() (telecollector.MessageService, error) {
-	return postgres.NewMessagesService(), nil
+	return postgres.NewMessagesService()
 }

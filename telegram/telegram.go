@@ -73,7 +73,7 @@ type PreCheckoutQuery json.RawMessage
 type Message struct {
 	ID                    int64                 `json:"message_id"`
 	From                  *User                 `json:"from,omitempty"`
-	Date                  int                   `json:"date"`
+	Date                  int64                 `json:"date"`
 	Chat                  *Chat                 `json:"chat"`
 	ForwardFrom           *User                 `json:"forward_from,omitempty"`
 	ForwardFromChat       *Chat                 `json:"forward_from_chat,omitempty"`

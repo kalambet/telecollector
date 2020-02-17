@@ -25,11 +25,14 @@ func (s *server) handleMessage() http.HandlerFunc {
 			return
 		}
 
-		err = s.msgService.Save(telecollector.NewMessage(&upd))
-		if err != nil {
-			log.Printf("server: error saving message: %s", err.Error())
-			s.respond(w, http.StatusInternalServerError, "Error saving message")
-			return
+		msg := telecollector.NewMessage(&upd)
+		if msg != nil {
+			err = s.msgService.Save(msg)
+			if err != nil {
+				log.Printf("server: error saving message: %s", err.Error())
+				s.respond(w, http.StatusInternalServerError, "Error saving message")
+				return
+			}
 		}
 
 		s.respond(w, http.StatusOK, "OK")
