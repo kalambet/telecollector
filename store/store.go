@@ -8,3 +8,11 @@ import (
 func NewMessagesService() (telecollector.MessageService, error) {
 	return postgres.NewMessagesService()
 }
+
+func NewCrenetialService() (telecollector.CredentialService, error) {
+	return postgres.NewCredentialService()
+}
+
+func Shutdown() error {
+	return postgres.Shutdown()
+}

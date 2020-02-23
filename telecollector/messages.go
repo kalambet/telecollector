@@ -28,10 +28,16 @@ type Author struct {
 	Username string
 }
 
+type Command struct {
+	Name   string
+	Params map[string]string
+}
+
 type Entry struct {
 	Message Message
 	Author  Author
 	Chat    Chat
+	Command Command
 }
 
 type MessageService interface {
@@ -42,11 +48,17 @@ func NewEntry(upd *telegram.Update) *Entry {
 	var msg *telegram.Message
 	if upd.Message != nil {
 		msg = upd.Message
-	} else if upd.EditedMessage != nil {
+	}
+
+	if upd.EditedMessage != nil {
 		msg = upd.EditedMessage
-	} else if upd.ChannelPost != nil {
+	}
+
+	if upd.ChannelPost != nil {
 		msg = upd.ChannelPost
-	} else if upd.EditedChannelPost != nil {
+	}
+
+	if upd.EditedChannelPost != nil {
 		msg = upd.EditedChannelPost
 	}
 
@@ -61,7 +73,15 @@ func NewEntry(upd *telegram.Update) *Entry {
 	tags := make([]string, 0)
 	if msg.Entities != nil {
 		for _, e := range msg.Entities {
-			tags = append(tags, msg.Text[e.Offset:e.Offset+e.Length])
+			if e.Type == "hashtag" {
+				tags = append(tags, msg.Text[e.Offset:e.Offset+e.Length])
+			} else e.Type == "bot_command" {
+				c := Command{
+					Name:   msg.Text[e.Offset:e.Offset+e.Length],
+					Params: nil,
+				}
+
+			}
 		}
 	}
 

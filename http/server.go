@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kalambet/telecollector/store"
+
 	"github.com/kalambet/telecollector/telecollector"
 )
 
@@ -21,9 +23,10 @@ var (
 )
 
 type server struct {
-	port       int
-	router     *http.ServeMux
-	msgService telecollector.MessageService
+	port        int
+	router      *http.ServeMux
+	msgService  telecollector.MessageService
+	credService telecollector.CredentialService
 }
 
 type response struct {
@@ -31,7 +34,7 @@ type response struct {
 	Message string `json:"message"`
 }
 
-func NewServer(ms telecollector.MessageService) (*server, error) {
+func NewServer(ms telecollector.MessageService, cred telecollector.CredentialService) (*server, error) {
 	portStr := os.Getenv("PORT")
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
@@ -39,9 +42,10 @@ func NewServer(ms telecollector.MessageService) (*server, error) {
 	}
 
 	res := &server{
-		port:       port,
-		msgService: ms,
-		router:     http.NewServeMux(),
+		port:        port,
+		msgService:  ms,
+		credService: cred,
+		router:      http.NewServeMux(),
 	}
 
 	token := os.Getenv("TG_TOKEN")
@@ -60,7 +64,7 @@ func (s *server) StartServer() {
 	}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
-			log.Printf("server: execution was interrupted -> %s\n", err.Error())
+			log.Printf("server: execution was interrupted: %s\n", err.Error())
 		}
 	}()
 
@@ -75,18 +79,23 @@ func (s *server) StartServer() {
 	defer s.stopServer()
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("server: error while shut down -> %s\n", err.Error())
+		log.Printf("server: error while shutdown: %s\n", err.Error())
 	}
 }
 
-func (s *server) stopServer() {}
+func (s *server) stopServer() {
+	err := store.Shutdown()
+	if err != nil {
+		log.Fatalf("server: store shutdown error: %s", err.Error())
+	}
+}
 
 func (s *server) respond(w http.ResponseWriter, st int, m string) {
 
 	w.Header().Add("content-type", "application/json")
 	w.Header().Add("accept", "application/json")
 
-	w.WriteHeader(st)
+	w.WriteHeader(http.StatusOK)
 
 	data := response{
 		Status:  st,
