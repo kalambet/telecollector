@@ -1,8 +1,11 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/kalambet/telecollector/telecollector"
@@ -20,9 +23,15 @@ func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		d := json.NewDecoder(r.Body)
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			s.respond(w, http.StatusBadRequest, "Body can't be read")
+		}
+		log.Printf("The Body: \n%s", body)
+
+		d := json.NewDecoder(bytes.NewReader(body))
 		var upd telegram.Update
-		err := d.Decode(&upd)
+		err = d.Decode(&upd)
 		if err != nil {
 			s.respond(w, http.StatusNotAcceptable, "Sent entity is not update")
 			return
@@ -37,7 +46,7 @@ func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 				ctx = context.Background()
 			}
 
-			ctx = context.WithValue(ctx, ContextKeyEntry, &entry)
+			ctx = context.WithValue(ctx, ContextKeyEntry, entry)
 			r = r.WithContext(ctx)
 		}
 

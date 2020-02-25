@@ -17,12 +17,12 @@ import (
 
 func (s *server) routes(secretPath string) {
 	s.router.HandleFunc("/", s.handleStatus())
-	s.router.HandleFunc(fmt.Sprintf("/%s", secretPath), s.handleMessage())
+	s.router.HandleFunc(fmt.Sprintf("/%s", secretPath), s.buildContext(s.handleMessage()))
 }
 
 func (s *server) routeUpdate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		entry, ok := r.Context().Value(ContextKeyEntry).(*telecollector.Entry)
+		_, ok := r.Context().Value(ContextKeyEntry).(*telecollector.Entry)
 		if !ok {
 			s.respond(w, http.StatusNotAcceptable, "Unable to rote update")
 			return

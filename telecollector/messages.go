@@ -34,10 +34,14 @@ type Command struct {
 }
 
 type Entry struct {
-	Message Message
-	Author  Author
-	Chat    Chat
-	Command Command
+	Message *Message
+	Author  *Author
+	Chat    *Chat
+	Command *Command
+}
+
+func (e *Entry) isApplicable() bool {
+	return (e.Message != nil && len(e.Message.Tags) > 0) || e.Command != nil
 }
 
 type MessageService interface {
@@ -45,80 +49,72 @@ type MessageService interface {
 }
 
 func NewEntry(upd *telegram.Update) *Entry {
-	var msg *telegram.Message
+	msgs := make([]*telegram.Message, 0)
 	if upd.Message != nil {
-		msg = upd.Message
+		msgs = append(msgs, upd.Message)
 	}
 
 	if upd.EditedMessage != nil {
-		msg = upd.EditedMessage
+		msgs = append(msgs, upd.EditedMessage)
 	}
 
 	if upd.ChannelPost != nil {
-		msg = upd.ChannelPost
+		msgs = append(msgs, upd.ChannelPost)
 	}
 
 	if upd.EditedChannelPost != nil {
-		msg = upd.EditedChannelPost
+		msgs = append(msgs, upd.EditedChannelPost)
 	}
 
-	if msg == nil {
+	if len(msgs) == 0 {
 		return nil
 	}
 
-	if len(msg.Entities) == 0 {
-		return nil
+	entry := &Entry{
+		Message: &Message{
+			ID: upd.ID,
+		},
+		Chat: &Chat{},
 	}
 
-	tags := make([]string, 0)
-	if msg.Entities != nil {
+	for _, msg := range msgs {
+		if msg.Entities == nil || len(msg.Entities) == 0 {
+			continue
+		}
+
+		entry.Message.Tags = make([]string, 0)
 		for _, e := range msg.Entities {
 			if e.Type == "hashtag" {
-				tags = append(tags, msg.Text[e.Offset:e.Offset+e.Length])
-			} else e.Type == "bot_command" {
-				c := Command{
-					Name:   msg.Text[e.Offset:e.Offset+e.Length],
+				entry.Message.Tags = append(entry.Message.Tags, msg.Text[e.Offset:e.Offset+e.Length])
+			} else if e.Type == "bot_command" {
+				entry.Command = &Command{
+					Name:   msg.Text[e.Offset : e.Offset+e.Length],
 					Params: nil,
 				}
+			}
+		}
 
+		if msg.From != nil {
+			entry.Author = &Author{
+				ID:       msg.From.ID,
+				First:    msg.From.FirstName,
+				Last:     msg.From.LastName,
+				Username: msg.From.UserName,
 			}
 		}
 	}
 
-	if len(tags) == 0 {
+	if !entry.isApplicable() {
 		return nil
 	}
 
-	author := Author{}
-	if msg.From != nil {
-		author = Author{
-			ID:       msg.From.ID,
-			First:    msg.From.FirstName,
-			Last:     msg.From.LastName,
-			Username: msg.From.UserName,
-		}
-	} else {
+	if entry.Author == nil {
 		// Telegram `From` is empty if the message is from Channel
-		author = Author{
+		entry.Author = &Author{
 			ID:    0,
-			First: msg.Chat.Title,
+			First: msgs[0].Chat.Title,
 		}
 	}
 
-	return &Entry{
-		Message: Message{
-			ID:       msg.ID,
-			Text:     msg.Text,
-			Tags:     tags,
-			Date:     time.Unix(msg.Date, 0),
-			ChatID:   msg.Chat.ID,
-			AuthorID: author.ID,
-		},
-		Chat: Chat{
-			ID:        msg.Chat.ID,
-			Messenger: "Telegram",
-			Name:      msg.Chat.Title,
-		},
-		Author: author,
-	}
+	return entry
 }
