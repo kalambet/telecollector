@@ -61,7 +61,7 @@ func (cs *credentialsService) loadAllowances() error {
 		return err
 	}
 
-	cs.Allowances = make(map[int64]*telecollector.Allowance, 0)
+	cs.Allowances = make(map[int64]*telecollector.Allowance)
 	for rows.Next() {
 		a := telecollector.Allowance{}
 		if err := rows.Scan(&a.ChatID, &a.AuthorID, &a.Follow); err != nil {
@@ -76,13 +76,17 @@ func (cs *credentialsService) loadAllowances() error {
 
 func (cs *credentialsService) loadAdmins() error {
 	adminStr := os.Getenv("BOT_ADMINS")
+	if len(adminStr) == 0 {
+		return nil
+	}
+
 	admins := strings.Split(adminStr, ",")
 
 	if len(admins) == 0 {
 		return nil
 	}
 
-	cs.Admin = make(map[int64]bool, 0)
+	cs.Admin = make(map[int64]bool)
 	for _, a := range admins {
 		id, err := strconv.Atoi(a)
 		if err != nil {

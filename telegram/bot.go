@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -22,8 +23,8 @@ type Bot struct {
 	token    string
 }
 
-func apiRequest(token string, cmd string, body io.Reader) (io.ReadCloser, error) {
-	url := fmt.Sprintf("https://https://api.telegram.org/bot%s/%s", token, cmd)
+func apiRequest(token string, cmd string, body io.Reader) ([]byte, error) {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, cmd)
 	req, err := http.NewRequest(CommandToMethod[cmd], url, body)
 	if err != nil {
 		return nil, err
@@ -35,8 +36,18 @@ func apiRequest(token string, cmd string, body io.Reader) (io.ReadCloser, error)
 		return nil, err
 	}
 
-	return resp.Body, nil
+	d := json.NewDecoder(resp.Body)
+	var data Response
+	err = d.Decode(&data)
+	if err != nil {
+		return nil, err
+	}
 
+	if !data.OK {
+		log.Printf("Result: %s", data.Result)
+	}
+
+	return data.Result, nil
 }
 
 func NewBot(token string) (*Bot, error) {
@@ -45,19 +56,18 @@ func NewBot(token string) (*Bot, error) {
 		return nil, err
 	}
 
+	d := json.NewDecoder(bytes.NewReader(body))
 	var bot Bot
-	d := json.NewDecoder(body)
 	err = d.Decode(&bot)
 	if err != nil {
 		return nil, err
 	}
-
 	bot.token = token
 
 	return &bot, nil
 }
 
-func (b *Bot) apiRequest(cmd string, body io.Reader) (io.ReadCloser, error) {
+func (b *Bot) apiRequest(cmd string, body io.Reader) ([]byte, error) {
 	return apiRequest(b.token, cmd, body)
 }
 
@@ -66,7 +76,7 @@ func (b *Bot) GetUsername() string {
 }
 
 func (b *Bot) SendMessage(chatID int64, text string) error {
-	msg := MessageResponse{
+	msg := MessageResult{
 		ChatId:    chatID,
 		Text:      text,
 		ParseMode: "MarkdownV2",

@@ -51,7 +51,7 @@ func (s *server) routeCommand(entry *telecollector.Entry) http.HandlerFunc {
 			s.onlyAdmin(s.handleFollow(entry, false))(w, r)
 			return
 		case telecollector.CommandWhoami:
-			s.handleWhoami(entry)
+			s.handleWhoami(entry)(w, r)
 			return
 		}
 

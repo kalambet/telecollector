@@ -38,7 +38,12 @@ type User struct {
 	SupportsInlineQueries   bool   `json:"supports_inline_queries,omitempty"`
 }
 
-type MessageResponse struct {
+type Response struct {
+	OK     bool            `json:"ok"`
+	Result json.RawMessage `json:"result"`
+}
+
+type MessageResult struct {
 	ChatId                int64  `json:"chat_id"`
 	Text                  string `json:"text"`
 	ParseMode             string `json:"parse_mode"`
