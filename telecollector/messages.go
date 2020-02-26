@@ -64,24 +64,24 @@ type MessageService interface {
 }
 
 func NewEntry(upd *telegram.Update) *Entry {
-	msgs := make([]*telegram.Message, 0)
+	var msg *telegram.Message
 	if upd.Message != nil {
-		msgs = append(msgs, upd.Message)
+		msg = upd.Message
 	}
 
 	if upd.EditedMessage != nil {
-		msgs = append(msgs, upd.EditedMessage)
+		msg = upd.EditedMessage
 	}
 
 	if upd.ChannelPost != nil {
-		msgs = append(msgs, upd.ChannelPost)
+		msg = upd.ChannelPost
 	}
 
 	if upd.EditedChannelPost != nil {
-		msgs = append(msgs, upd.EditedChannelPost)
+		msg = upd.EditedChannelPost
 	}
 
-	if len(msgs) == 0 {
+	if msg == nil {
 		return nil
 	}
 
@@ -89,37 +89,39 @@ func NewEntry(upd *telegram.Update) *Entry {
 		Message: &Message{
 			ID: upd.ID,
 		},
-		Chat: &Chat{},
+		Chat: &Chat{
+			ID:        msg.Chat.ID,
+			Messenger: "Telegram",
+			Name:      msg.Chat.Title,
+		},
 	}
 
-	for _, msg := range msgs {
-		if msg.Entities == nil || len(msg.Entities) == 0 {
-			continue
-		}
+	if msg.Entities == nil || len(msg.Entities) == 0 {
+		return nil
+	}
 
-		entry.Message.Tags = make([]string, 0)
-		for _, e := range msg.Entities {
-			if e.Type == telegram.EntityTypeHashtag {
-				entry.Message.Tags = append(entry.Message.Tags, msg.Text[e.Offset:e.Offset+e.Length])
-			} else if e.Type == telegram.EntityTypeBotCommand {
-				// bot command looks like `/command@NameBot`
-				// so we split string by @ and then take first segment from second letter to the end
-				parts := strings.Split(msg.Text[e.Offset:e.Offset+e.Length], "@")
-				entry.Command = &Command{
-					Name:     parts[0][1:],
-					Receiver: parts[len(parts)-1],
-					Params:   nil,
-				}
+	entry.Message.Tags = make([]string, 0)
+	for _, e := range msg.Entities {
+		if e.Type == telegram.EntityTypeHashtag {
+			entry.Message.Tags = append(entry.Message.Tags, msg.Text[e.Offset:e.Offset+e.Length])
+		} else if e.Type == telegram.EntityTypeBotCommand {
+			// bot command looks like `/command@NameBot`
+			// so we split string by @ and then take first segment from second letter to the end
+			parts := strings.Split(msg.Text[e.Offset:e.Offset+e.Length], "@")
+			entry.Command = &Command{
+				Name:     parts[0][1:],
+				Receiver: parts[len(parts)-1],
+				Params:   nil,
 			}
 		}
+	}
 
-		if msg.From != nil {
-			entry.Author = &Author{
-				ID:       msg.From.ID,
-				First:    msg.From.FirstName,
-				Last:     msg.From.LastName,
-				Username: msg.From.UserName,
-			}
+	if msg.From != nil {
+		entry.Author = &Author{
+			ID:       msg.From.ID,
+			First:    msg.From.FirstName,
+			Last:     msg.From.LastName,
+			Username: msg.From.UserName,
 		}
 	}
 
@@ -131,7 +133,7 @@ func NewEntry(upd *telegram.Update) *Entry {
 		// Telegram `From` is empty if the message is from Channel
 		entry.Author = &Author{
 			ID:    0,
-			First: msgs[0].Chat.Title,
+			First: msg.Chat.Title,
 		}
 	}
 

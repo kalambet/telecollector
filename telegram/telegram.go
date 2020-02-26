@@ -43,7 +43,7 @@ type Response struct {
 	Result json.RawMessage `json:"result"`
 }
 
-type MessageResult struct {
+type MessageRequest struct {
 	ChatId                int64  `json:"chat_id"`
 	Text                  string `json:"text"`
 	ParseMode             string `json:"parse_mode"`

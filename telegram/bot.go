@@ -76,11 +76,13 @@ func (b *Bot) GetUsername() string {
 }
 
 func (b *Bot) SendMessage(chatID int64, text string) error {
-	msg := MessageResult{
+	msg := MessageRequest{
 		ChatId:    chatID,
 		Text:      text,
 		ParseMode: "MarkdownV2",
 	}
+
+	log.Printf("Message")
 
 	body, err := json.Marshal(&msg)
 	if err != nil {
