@@ -28,6 +28,7 @@ func apiRequest(token string, cmd string, body []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
 
 	cli := http.Client{}
 	resp, err := cli.Do(req)

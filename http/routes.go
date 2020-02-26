@@ -38,7 +38,7 @@ func (s *server) routeUpdate() http.HandlerFunc {
 
 func (s *server) routeCommand(entry *telecollector.Entry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if entry.Command.Receiver != s.bot.GetUsername() {
+		if len(entry.Command.Receiver) != 0 && entry.Command.Receiver != s.bot.GetUsername() {
 			s.respond(w, http.StatusOK, "OK")
 			return
 		}

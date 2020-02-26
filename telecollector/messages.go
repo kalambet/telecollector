@@ -108,9 +108,15 @@ func NewEntry(upd *telegram.Update) *Entry {
 			// bot command looks like `/command@NameBot`
 			// so we split string by @ and then take first segment from second letter to the end
 			parts := strings.Split(msg.Text[e.Offset:e.Offset+e.Length], "@")
+			var receiver string
+			if len(parts) == 1 {
+				receiver = ""
+			} else {
+				receiver = parts[len(parts)-1]
+			}
 			entry.Command = &Command{
 				Name:     parts[0][1:],
-				Receiver: parts[len(parts)-1],
+				Receiver: receiver,
 				Params:   nil,
 			}
 		}
