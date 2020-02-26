@@ -1,6 +1,13 @@
 package telegram
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
+
+const (
+	EntityTypeBotCommand = "bot_command"
+	EntityTypeHashtag    = "hashtag"
+)
 
 type Chat struct {
 	ID               int64            `json:"id"`
@@ -29,6 +36,15 @@ type User struct {
 	CanJoinGroups           bool   `json:"can_join_groups,omitempty"`
 	CanReadAllGroupMessages bool   `json:"can_read_all_group_messages,omitempty"`
 	SupportsInlineQueries   bool   `json:"supports_inline_queries,omitempty"`
+}
+
+type MessageResponse struct {
+	ChatId                int64  `json:"chat_id"`
+	Text                  string `json:"text"`
+	ParseMode             string `json:"parse_mode"`
+	DisableWebPagePreview bool   `json:"disable_web_page_preview"`
+	DisableNotification   bool   `json:"disable_notification"`
+	ReplyToMessageID      int64  `json:"reply_to_message_id"`
 }
 
 type MessageEntity struct {

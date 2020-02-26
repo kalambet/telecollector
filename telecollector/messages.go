@@ -1,10 +1,24 @@
 package telecollector
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kalambet/telecollector/telegram"
 )
+
+const (
+	TriggerTag      = "#a51"
+	CommandFollow   = "follow"
+	CommandUnfollow = "unfollow"
+	CommandWhoami   = "whoami"
+)
+
+type Bot interface {
+	GetUsername() string
+	SendMessage(int64, string) error
+}
 
 type Message struct {
 	ID       int64
@@ -29,8 +43,9 @@ type Author struct {
 }
 
 type Command struct {
-	Name   string
-	Params map[string]string
+	Name     string
+	Receiver string
+	Params   map[string]string
 }
 
 type Entry struct {
@@ -84,12 +99,16 @@ func NewEntry(upd *telegram.Update) *Entry {
 
 		entry.Message.Tags = make([]string, 0)
 		for _, e := range msg.Entities {
-			if e.Type == "hashtag" {
+			if e.Type == telegram.EntityTypeHashtag {
 				entry.Message.Tags = append(entry.Message.Tags, msg.Text[e.Offset:e.Offset+e.Length])
-			} else if e.Type == "bot_command" {
+			} else if e.Type == telegram.EntityTypeBotCommand {
+				// bot command looks like `/command@NameBot`
+				// so we split string by @ and then take first segment from second letter to the end
+				parts := strings.Split(msg.Text[e.Offset:e.Offset+e.Length], "@")
 				entry.Command = &Command{
-					Name:   msg.Text[e.Offset : e.Offset+e.Length],
-					Params: nil,
+					Name:     parts[0][1:],
+					Receiver: parts[len(parts)-1],
+					Params:   nil,
 				}
 			}
 		}
@@ -117,4 +136,17 @@ func NewEntry(upd *telegram.Update) *Entry {
 	}
 
 	return entry
+}
+
+func NewBot(token string) (Bot, error) {
+	return telegram.NewBot(token)
+}
+
+func ComposeWhoAmIMessage(author *Author) string {
+	return fmt.Sprintf(
+		"*Name*: %s %s\n*Username*: %s\n*ID*:%d",
+		author.First,
+		author.Last,
+		author.Username,
+		author.ID)
 }

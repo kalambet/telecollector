@@ -56,7 +56,7 @@ func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *server) onlyWhitelisted(next http.HandlerFunc) http.HandlerFunc {
+func (s *server) onlyAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		entry, ok := r.Context().Value(ContextKeyEntry).(*telecollector.Entry)
 		if !ok {
@@ -64,8 +64,27 @@ func (s *server) onlyWhitelisted(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if !s.credService.CheckAdmin(entry.Author.ID) && !s.credService.CheckChat(entry.Chat.ID) {
-			s.respond(w, http.StatusNotAcceptable, "Sent entry is not from admin nor from followed chat")
+		if !s.credService.CheckAdmin(entry.Author.ID) {
+			s.respond(w, http.StatusNotAcceptable, "Sent entry is not from authorized admin")
+			return
+		}
+
+		if next != nil {
+			next(w, r)
+		}
+	}
+}
+
+func (s *server) onlyWhitelistedChats(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		entry, ok := r.Context().Value(ContextKeyEntry).(*telecollector.Entry)
+		if !ok {
+			s.respond(w, http.StatusNotAcceptable, "Sent entity is not entry")
+			return
+		}
+
+		if !s.credService.CheckChat(entry.Chat.ID) {
+			s.respond(w, http.StatusNotAcceptable, "Sent entry is not from followed chat")
 			return
 		}
 

@@ -27,7 +27,7 @@ insert into
     allowances (chat_id, author_id, follow, modified) 
     values ($1, $2, $3, $4) 
         on conflict (chat_id) 
-        do update set follow = $3, modified = $4;`
+        do update set author_id = $2, follow = $3, modified = $4;`
 )
 
 type credentialsService struct {

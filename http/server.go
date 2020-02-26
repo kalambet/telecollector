@@ -27,6 +27,7 @@ type server struct {
 	router      *http.ServeMux
 	msgService  telecollector.MessageService
 	credService telecollector.CredentialService
+	bot         telecollector.Bot
 }
 
 type response struct {
@@ -53,6 +54,11 @@ func NewServer(ms telecollector.MessageService, cred telecollector.CredentialSer
 		return nil, ErrTGTokenEmpty
 	}
 	res.routes(token)
+
+	res.bot, err = telecollector.NewBot(token)
+	if err != nil {
+		return nil, err
+	}
 
 	return res, nil
 }
