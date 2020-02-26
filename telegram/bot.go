@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 )
@@ -23,9 +22,9 @@ type Bot struct {
 	token    string
 }
 
-func apiRequest(token string, cmd string, body io.Reader) ([]byte, error) {
+func apiRequest(token string, cmd string, body []byte) ([]byte, error) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, cmd)
-	req, err := http.NewRequest(CommandToMethod[cmd], url, body)
+	req, err := http.NewRequest(CommandToMethod[cmd], url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +66,7 @@ func NewBot(token string) (*Bot, error) {
 	return &bot, nil
 }
 
-func (b *Bot) apiRequest(cmd string, body io.Reader) ([]byte, error) {
+func (b *Bot) apiRequest(cmd string, body []byte) ([]byte, error) {
 	return apiRequest(b.token, cmd, body)
 }
 
@@ -82,13 +81,13 @@ func (b *Bot) SendMessage(chatID int64, text string) error {
 		ParseMode: "MarkdownV2",
 	}
 
-	log.Printf("Message: %#v", msg)
-
 	body, err := json.Marshal(&msg)
 	if err != nil {
 		return err
 	}
-	_, err = b.apiRequest("sendMessage", bytes.NewReader(body))
+	log.Printf("Send Message: %s", body)
+
+	_, err = b.apiRequest("sendMessage", body)
 	if err != nil {
 		return err
 	}
