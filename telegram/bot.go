@@ -82,7 +82,7 @@ func (b *Bot) SendMessage(chatID int64, text string) error {
 		ParseMode: "MarkdownV2",
 	}
 
-	log.Printf("Message")
+	log.Printf("Message: %#v", msg)
 
 	body, err := json.Marshal(&msg)
 	if err != nil {
