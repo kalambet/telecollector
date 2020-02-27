@@ -18,6 +18,7 @@ const (
 type Bot interface {
 	GetUsername() string
 	SendMessage(int64, string) error
+	RepostMessage(string) error
 }
 
 type Message struct {

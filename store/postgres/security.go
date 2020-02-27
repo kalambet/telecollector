@@ -20,7 +20,7 @@ create table allowances(
     primary key(chat_id)
 );`
 
-	queryAllowances = `select (chat_id, author_id, follow) from allowances;`
+	queryAllowances = `select chat_id, author_id, follow from allowances;`
 
 	insertAllowance = `
 insert into 
@@ -60,6 +60,7 @@ func (cs *credentialsService) loadAllowances() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	cs.Allowances = make(map[int64]*telecollector.Allowance)
 	for rows.Next() {

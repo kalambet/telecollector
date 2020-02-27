@@ -38,17 +38,20 @@ func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		entry := telecollector.NewEntry(&upd)
-		if entry != nil {
-			var ctx context.Context
-			if r.Context() != nil {
-				ctx = r.Context()
-			} else {
-				ctx = context.Background()
-			}
-
-			ctx = context.WithValue(ctx, ContextKeyEntry, entry)
-			r = r.WithContext(ctx)
+		if entry == nil {
+			s.respond(w, http.StatusOK, "Not applicable")
+			return
 		}
+
+		var ctx context.Context
+		if r.Context() != nil {
+			ctx = r.Context()
+		} else {
+			ctx = context.Background()
+		}
+
+		ctx = context.WithValue(ctx, ContextKeyEntry, entry)
+		r = r.WithContext(ctx)
 
 		if next != nil {
 			next(w, r)

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 )
 
 var (
@@ -19,6 +21,7 @@ type Bot struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Name     string `json:"first_name"`
+	channel  int64
 	token    string
 }
 
@@ -62,8 +65,14 @@ func NewBot(token string) (*Bot, error) {
 	if err != nil {
 		return nil, err
 	}
-	bot.token = token
 
+	bot.channel, err = strconv.ParseInt(os.Getenv("TG_CHANNEL"), 10, 64)
+	if err != nil {
+		log.Printf("telegram: error identifing repost channel: %s", err.Error())
+		bot.channel = 0
+	}
+
+	bot.token = token
 	return &bot, nil
 }
 
@@ -94,4 +103,12 @@ func (b *Bot) SendMessage(chatID int64, text string) error {
 	}
 
 	return nil
+}
+
+func (b *Bot) RepostMessage(text string) error {
+	if b.channel == 0 {
+		return nil
+	}
+
+	return b.SendMessage(b.channel, text)
 }

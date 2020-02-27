@@ -20,6 +20,8 @@ func (s *server) handleMessage(entry *telecollector.Entry) http.HandlerFunc {
 					s.respond(w, http.StatusInternalServerError, "Error saving message")
 					return
 				}
+
+				//s.bot.SendMessage()
 			}
 		}
 
