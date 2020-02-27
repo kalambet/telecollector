@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -87,7 +88,7 @@ func (b *Bot) GetUsername() string {
 func (b *Bot) SendMessage(chatID int64, text string) error {
 	msg := MessageRequest{
 		ChatId:    chatID,
-		Text:      text,
+		Text:      strings.ReplaceAll(text, "#", "\\#"),
 		ParseMode: "MarkdownV2",
 	}
 

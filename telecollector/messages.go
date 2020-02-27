@@ -122,6 +122,7 @@ func NewEntry(upd *telegram.Update) *Entry {
 			}
 		}
 	}
+	entry.Message.Text = msg.Text
 
 	if msg.From != nil {
 		entry.Author = &Author{

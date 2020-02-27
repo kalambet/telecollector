@@ -21,7 +21,9 @@ func (s *server) handleMessage(entry *telecollector.Entry) http.HandlerFunc {
 					return
 				}
 
-				//s.bot.SendMessage()
+				if err = s.bot.RepostMessage(entry.Message.Text); err != nil {
+					log.Printf("server: error reposting message: %s", err.Error())
+				}
 			}
 		}
 
