@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 )
 
 var (
 	CommandToMethod = map[string]string{
-		"getMe":       http.MethodGet,
-		"sendMessage": http.MethodPost,
+		"getMe":           http.MethodGet,
+		"sendMessage":     http.MethodPost,
+		"editMessageText": http.MethodPost,
 	}
 )
 
@@ -85,11 +85,52 @@ func (b *Bot) GetUsername() string {
 	return b.Username
 }
 
-func (b *Bot) SendMessage(chatID int64, text string) error {
-	msg := MessageRequest{
-		ChatId:    chatID,
-		Text:      strings.ReplaceAll(text, "#", "\\#"),
-		ParseMode: "MarkdownV2",
+func (b *Bot) SendMessage(text string) (int64, error) {
+	if b.channel == 0 {
+		return 0, nil
+	}
+
+	msg := struct {
+		ChatId int64  `json:"chat_id"`
+		Text   string `json:"text"`
+	}{
+		ChatId: b.channel,
+		Text:   text,
+	}
+
+	body, err := json.Marshal(&msg)
+	if err != nil {
+		return 0, err
+	}
+	log.Printf("Send Message: %s", body)
+
+	resp, err := b.apiRequest("sendMessage", body)
+	if err != nil {
+		return 0, err
+	}
+
+	respMsg := Message{}
+	err = json.Unmarshal(resp, &respMsg)
+	if err != nil {
+		return 0, nil
+	}
+
+	return respMsg.ID, nil
+}
+
+func (b *Bot) EditMessage(msgID int64, text string) error {
+	if b.channel == 0 {
+		return nil
+	}
+
+	msg := struct {
+		ChatId int64  `json:"chat_id"`
+		MsgID  int64  `json:"message_id"`
+		Text   string `json:"text"`
+	}{
+		ChatId: b.channel,
+		MsgID:  msgID,
+		Text:   text,
 	}
 
 	body, err := json.Marshal(&msg)
@@ -98,18 +139,16 @@ func (b *Bot) SendMessage(chatID int64, text string) error {
 	}
 	log.Printf("Send Message: %s", body)
 
-	_, err = b.apiRequest("sendMessage", body)
+	resp, err := b.apiRequest("editMessageText", body)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (b *Bot) RepostMessage(text string) error {
-	if b.channel == 0 {
+	respMsg := Message{}
+	err = json.Unmarshal(resp, &respMsg)
+	if err != nil {
 		return nil
 	}
 
-	return b.SendMessage(b.channel, text)
+	return nil
 }

@@ -25,7 +25,7 @@ func (s *server) handleFollow(entry *telecollector.Entry, direction bool) http.H
 
 func (s *server) handleWhoami(entry *telecollector.Entry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := s.bot.SendMessage(entry.Chat.ID, telecollector.ComposeWhoAmIMessage(entry.Author))
+		_, err := s.bot.SendMessage(telecollector.ComposeWhoAmIMessage(entry.Author))
 		if err != nil {
 			log.Printf("server: error sending `whoami` response: %s", err.Error())
 			s.respond(w, http.StatusInternalServerError, "Error sending `whoami` message")

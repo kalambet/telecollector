@@ -10,6 +10,8 @@ import (
 
 var db *sql.DB
 
+const queryTableExistence = `select exists (select from pg_tables where schemaname = 'public' and tablename = $1);`
+
 func init() {
 	var err error
 	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
@@ -27,21 +29,20 @@ func gracefulCreateTable(table string, query string) error {
 	defer rows.Close()
 
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if rows.Next() {
 		var exists bool
 		err = rows.Scan(&exists)
 		if !exists || err == sql.ErrNoRows {
-			_, err := db.Query(query)
+			rows, err := db.Query(query)
 			defer rows.Close()
 
 			if err != nil {
 				return err
 			}
 		}
-		err = rows.Close()
 		if err != nil {
 			return err
 		}

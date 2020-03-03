@@ -57,10 +57,11 @@ func NewCredentialService() (telecollector.CredentialService, error) {
 
 func (cs *credentialsService) loadAllowances() error {
 	rows, err := db.Query(queryAllowances)
+	defer rows.Close()
+
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
 	cs.Allowances = make(map[int64]*telecollector.Allowance)
 	for rows.Next() {
@@ -115,6 +116,8 @@ func (cs *credentialsService) FollowChat(a *telecollector.Allowance) error {
 	if ok {
 		cs.Allowances[a.ChatID].Follow = a.Follow
 		cs.Allowances[a.ChatID].AuthorID = a.AuthorID
+	} else {
+		cs.Allowances[a.ChatID] = a
 	}
 
 	_, err := db.Exec(insertAllowance, &a.ChatID, &a.AuthorID, &a.Follow, time.Now())

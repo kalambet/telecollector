@@ -3,7 +3,6 @@ package telecollector
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/kalambet/telecollector/telegram"
 )
@@ -15,19 +14,22 @@ const (
 	CommandWhoami   = "whoami"
 )
 
-type Bot interface {
-	GetUsername() string
-	SendMessage(int64, string) error
-	RepostMessage(string) error
-}
+type MessageAction string
+
+var (
+	ActionAppend MessageAction = "append"
+	ActionSave   MessageAction = "save"
+)
 
 type Message struct {
 	ID       int64
+	Nonce    int64
 	ChatID   int64
 	AuthorID int64
-	Date     time.Time
+	Date     int64
 	Text     string
 	Tags     []string
+	Action   MessageAction
 }
 
 type Chat struct {
@@ -47,6 +49,7 @@ type Command struct {
 	Name     string
 	Receiver string
 	Params   map[string]string
+	Chat     *Chat
 }
 
 type Entry struct {
@@ -56,12 +59,11 @@ type Entry struct {
 	Command *Command
 }
 
-func (e *Entry) isApplicable() bool {
-	return (e.Message != nil && len(e.Message.Tags) > 0) || e.Command != nil
-}
-
 type MessageService interface {
-	Save(*Entry) error
+	Save(*Entry) (string, error)
+	LogBroadcast(int64, int64) error
+	FindBroadcast(int64) (int64, error)
+	CheckConnected(*Entry) (bool, error)
 }
 
 func NewEntry(upd *telegram.Update) *Entry {
@@ -88,7 +90,10 @@ func NewEntry(upd *telegram.Update) *Entry {
 
 	entry := &Entry{
 		Message: &Message{
-			ID: upd.ID,
+			ID:     upd.ID,
+			Text:   msg.Text,
+			Date:   msg.Date,
+			Action: ActionSave,
 		},
 		Chat: &Chat{
 			ID:        msg.Chat.ID,
@@ -108,7 +113,7 @@ func NewEntry(upd *telegram.Update) *Entry {
 		} else if e.Type == telegram.EntityTypeBotCommand {
 			// bot command looks like `/command@NameBot`
 			// so we split string by @ and then take first segment from second letter to the end
-			parts := strings.Split(msg.Text[e.Offset:e.Offset+e.Length], "@")
+			parts := strings.Split(upd.Message.Text[e.Offset:e.Offset+e.Length], "@")
 			var receiver string
 			if len(parts) == 1 {
 				receiver = ""
@@ -118,11 +123,13 @@ func NewEntry(upd *telegram.Update) *Entry {
 			entry.Command = &Command{
 				Name:     parts[0][1:],
 				Receiver: receiver,
-				Params:   nil,
+				Params: map[string]string{
+					"0": upd.Message.Text[e.Offset+e.Length:],
+				},
 			}
+			break
 		}
 	}
-	entry.Message.Text = msg.Text
 
 	if msg.From != nil {
 		entry.Author = &Author{
@@ -131,10 +138,6 @@ func NewEntry(upd *telegram.Update) *Entry {
 			Last:     msg.From.LastName,
 			Username: msg.From.UserName,
 		}
-	}
-
-	if !entry.isApplicable() {
-		return nil
 	}
 
 	if entry.Author == nil {
@@ -146,10 +149,6 @@ func NewEntry(upd *telegram.Update) *Entry {
 	}
 
 	return entry
-}
-
-func NewBot(token string) (Bot, error) {
-	return telegram.NewBot(token)
 }
 
 func ComposeWhoAmIMessage(author *Author) string {
