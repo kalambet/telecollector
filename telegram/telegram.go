@@ -151,5 +151,5 @@ type Update struct {
 }
 
 func CreateChannelPostLink(chat *Chat, msgID int64) string {
-	return fmt.Sprintf("https://t.me/%s/%s", chat.UserName, string(msgID))
+	return fmt.Sprintf("https://t.me/%s/%d", chat.UserName, msgID)
 }
