@@ -22,46 +22,53 @@ func (s *server) handleMessage(entry *telecollector.Entry) http.HandlerFunc {
 				return
 			}
 
-			text, err := s.msgService.Save(entry)
+			_, err = s.msgService.Save(entry)
 			if err != nil {
 				log.Printf("server: error saving message: %s", err.Error())
 				s.respond(w, http.StatusInternalServerError, "Error saving message")
 				return
 			}
 
-			switch entry.Message.Action {
-			case telecollector.ActionSave:
-				msgID, err := s.bot.SendMessage(text)
-				if err != nil {
-					log.Printf("server: error sending message: %s", err.Error())
-					s.respond(w, http.StatusInternalServerError, "Error sending message")
-					return
-				}
-
-				err = s.msgService.LogBroadcast(entry.Message.ID, msgID)
-				if err != nil {
-					log.Printf("server: error logging broadcast: %s", err.Error())
-					s.respond(w, http.StatusInternalServerError, "Error logging broadcast")
-					return
-				}
-
-				break
-			case telecollector.ActionAppend:
-				msgID, err := s.msgService.FindBroadcast(entry.Message.ID)
-				if err != nil {
-					log.Printf("server: error searching broadcast: %s", err.Error())
-					s.respond(w, http.StatusInternalServerError, "Error searching broadcast")
-					return
-				}
-
-				err = s.bot.EditMessage(msgID, text)
-				if err != nil {
-					log.Printf("server: error editing message: %s", err.Error())
-					s.respond(w, http.StatusInternalServerError, "Error editing message")
-					return
-				}
-				break
+			err = s.bot.ForwardMessage(entry.Chat.ID, entry.Message.Nonce)
+			if err != nil {
+				log.Printf("server: error forwarding message: %s", err.Error())
+				s.respond(w, http.StatusInternalServerError, "Error forwarding message")
+				return
 			}
+
+			//switch entry.Message.Action {
+			//case telecollector.ActionSave:
+			//	msgID, err := s.bot.SendMessage(text)
+			//	if err != nil {
+			//		log.Printf("server: error sending message: %s", err.Error())
+			//		s.respond(w, http.StatusInternalServerError, "Error sending message")
+			//		return
+			//	}
+			//
+			//	err = s.msgService.LogBroadcast(entry.Message.ID, msgID)
+			//	if err != nil {
+			//		log.Printf("server: error logging broadcast: %s", err.Error())
+			//		s.respond(w, http.StatusInternalServerError, "Error logging broadcast")
+			//		return
+			//	}
+			//
+			//	break
+			//case telecollector.ActionAppend:
+			//	msgID, err := s.msgService.FindBroadcast(entry.Message.ID)
+			//	if err != nil {
+			//		log.Printf("server: error searching broadcast: %s", err.Error())
+			//		s.respond(w, http.StatusInternalServerError, "Error searching broadcast")
+			//		return
+			//	}
+			//
+			//	err = s.bot.EditMessage(msgID, text)
+			//	if err != nil {
+			//		log.Printf("server: error editing message: %s", err.Error())
+			//		s.respond(w, http.StatusInternalServerError, "Error editing message")
+			//		return
+			//	}
+			//	break
+			//}
 
 		}
 

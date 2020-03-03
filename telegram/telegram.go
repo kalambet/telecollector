@@ -2,11 +2,14 @@ package telegram
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 const (
 	EntityTypeBotCommand = "bot_command"
 	EntityTypeHashtag    = "hashtag"
+
+	ChatTypeChannel = "channel"
 )
 
 type Chat struct {
@@ -89,12 +92,12 @@ type Message struct {
 	Chat                  *Chat                 `json:"chat"`
 	ForwardFrom           *User                 `json:"forward_from,omitempty"`
 	ForwardFromChat       *Chat                 `json:"forward_from_chat,omitempty"`
-	ForwardFromMessageID  int                   `json:"forward_from_message_id,omitempty"`
+	ForwardFromMessageID  int64                 `json:"forward_from_message_id,omitempty"`
 	ForwardSignature      string                `json:"forward_signature,omitempty"`
 	ForwardSenderName     string                `json:"forward_sender_name,omitempty"`
-	ForwardDate           int                   `json:"forward_date,omitempty"`
+	ForwardDate           int64                 `json:"forward_date,omitempty"`
 	ReplyToMessage        *Message              `json:"reply_to_message,omitempty"`
-	EditDate              int                   `json:"edit_date,omitempty"`
+	EditDate              int64                 `json:"edit_date,omitempty"`
 	MediaGroupID          string                `json:"media_group_id,omitempty"`
 	AuthorSignature       string                `json:"author_signature,omitempty"`
 	Text                  string                `json:"text"`
@@ -122,8 +125,8 @@ type Message struct {
 	GroupChatCreated      bool                  `json:"group_chat_created,omitempty"`
 	SupergroupChatCreated bool                  `json:"supergroup_chat_created,omitempty"`
 	ChannelChatCreated    bool                  `json:"channel_chat_created,omitempty"`
-	MigrateToChatID       int                   `json:"migrate_to_chat_id,omitempty"`
-	MigrateFromChatID     int                   `json:"migrate_from_chat_id,omitempty"`
+	MigrateToChatID       int64                 `json:"migrate_to_chat_id,omitempty"`
+	MigrateFromChatID     int64                 `json:"migrate_from_chat_id,omitempty"`
 	PinnedMessage         *Message              `json:"pinned_message,omitempty"`
 	Invoice               *Invoice              `json:"invoice,omitempty"`
 	SuccessfulPayment     *SuccessfulPayment    `json:"successful_payment,omitempty"`
@@ -145,4 +148,8 @@ type Update struct {
 	PreCheckoutQuery   *PreCheckoutQuery   `json:"pre_checkout_query,omitempty"`
 	Poll               *Poll               `json:"poll,omitempty"`
 	PollAnswer         *PollAnswer         `json:"poll_answer,omitempty"`
+}
+
+func CreateChannelPostLink(chat *Chat, msgID int64) string {
+	return fmt.Sprintf("https://t.me/%s/%s", chat.UserName, string(msgID))
 }

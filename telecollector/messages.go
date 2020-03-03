@@ -91,7 +91,7 @@ func NewEntry(upd *telegram.Update) *Entry {
 	entry := &Entry{
 		Message: &Message{
 			ID:     upd.ID,
-			Text:   msg.Text,
+			Nonce:  msg.ID,
 			Date:   msg.Date,
 			Action: ActionSave,
 		},
@@ -102,8 +102,12 @@ func NewEntry(upd *telegram.Update) *Entry {
 		},
 	}
 
-	if msg.Entities == nil || len(msg.Entities) == 0 {
-		return nil
+	if len(msg.Text) != 0 {
+		entry.Message.Text = msg.Text
+	} else {
+		if msg.ForwardFromChat != nil && msg.ForwardFromChat.Type == telegram.ChatTypeChannel {
+			entry.Message.Text = telegram.CreateChannelPostLink(msg.ForwardFromChat, msg.ForwardFromMessageID)
+		}
 	}
 
 	entry.Message.Tags = make([]string, 0)

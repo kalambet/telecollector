@@ -15,6 +15,7 @@ var (
 		"getMe":           http.MethodGet,
 		"sendMessage":     http.MethodPost,
 		"editMessageText": http.MethodPost,
+		"forwardMessage":  http.MethodPost,
 	}
 )
 
@@ -140,6 +141,41 @@ func (b *Bot) EditMessage(msgID int64, text string) error {
 	log.Printf("Send Message: %s", body)
 
 	resp, err := b.apiRequest("editMessageText", body)
+	if err != nil {
+		return err
+	}
+
+	respMsg := Message{}
+	err = json.Unmarshal(resp, &respMsg)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+func (b *Bot) ForwardMessage(chatID int64, msgID int64) error {
+	if b.channel == 0 {
+		return nil
+	}
+
+	msg := struct {
+		ChatId     int64 `json:"chat_id"`
+		FromChatID int64 `json:"from_chat_id"`
+		MsgID      int64 `json:"message_id"`
+	}{
+		ChatId:     b.channel,
+		FromChatID: chatID,
+		MsgID:      msgID,
+	}
+
+	body, err := json.Marshal(&msg)
+	if err != nil {
+		return err
+	}
+	log.Printf("Send Message: %s", body)
+
+	resp, err := b.apiRequest("forwardMessage", body)
 	if err != nil {
 		return err
 	}
