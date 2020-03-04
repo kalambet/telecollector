@@ -119,6 +119,37 @@ func (b *Bot) SendMessage(text string) (int64, error) {
 	return respMsg.ID, nil
 }
 
+func (b *Bot) ReplyMessage(text string, chatID int64, messageID int64) error {
+	msg := struct {
+		ChatId           int64  `json:"chat_id"`
+		Text             string `json:"text"`
+		ReplyToMessageID int64  `json:"reply_to_message_id"`
+	}{
+		ChatId:           chatID,
+		Text:             text,
+		ReplyToMessageID: messageID,
+	}
+
+	body, err := json.Marshal(&msg)
+	if err != nil {
+		return err
+	}
+	log.Printf("Reply Message: %s", body)
+
+	resp, err := b.apiRequest("sendMessage", body)
+	if err != nil {
+		return err
+	}
+
+	respMsg := Message{}
+	err = json.Unmarshal(resp, &respMsg)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
 func (b *Bot) EditMessage(msgID int64, text string) error {
 	if b.channel == 0 {
 		return nil

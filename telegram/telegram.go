@@ -3,6 +3,7 @@ package telegram
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -10,6 +11,8 @@ const (
 	EntityTypeHashtag    = "hashtag"
 
 	ChatTypeChannel = "channel"
+
+	JoinSeparator = " ➜ "
 )
 
 type Chat struct {
@@ -150,6 +153,33 @@ type Update struct {
 	PollAnswer         *PollAnswer         `json:"poll_answer,omitempty"`
 }
 
-func CreateChannelPostLink(chat *Chat, msgID int64) string {
-	return fmt.Sprintf("https://t.me/%s/%d", chat.UserName, msgID)
+func ExtractSaveTextFromMessage(msg *Message) string {
+	texts := make([]string, 0)
+	if len(msg.Text) != 0 {
+		texts = append(texts, msg.Text)
+	}
+
+	if msg.ForwardFromChat != nil && msg.ForwardFromChat.Type == ChatTypeChannel {
+		texts = append(texts, fmt.Sprintf("https://t.me/%s/%d", msg.ForwardFromChat.UserName, msg.ForwardFromMessageID))
+	}
+
+	if len(texts) == 0 {
+		return ""
+	}
+
+	if len(texts) == 1 {
+		return texts[0]
+	}
+
+	return strings.Join(texts, JoinSeparator)
+}
+
+func ExtractTags(msg *Message) []string {
+	tags := make([]string, 0)
+	for _, e := range msg.Entities {
+		if e.Type == EntityTypeHashtag {
+			tags = append(tags, msg.Text[e.Offset:e.Offset+e.Length])
+		}
+	}
+	return tags
 }

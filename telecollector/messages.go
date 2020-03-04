@@ -88,12 +88,33 @@ func NewEntry(upd *telegram.Update) *Entry {
 		return nil
 	}
 
+	// If it is a reply message we need to preserve the reply text but save the original
+	var replyText string
+	var replyTags []string
+	if msg.ReplyToMessage != nil {
+		replyText = telegram.ExtractSaveTextFromMessage(msg)
+		replyTags = telegram.ExtractTags(msg)
+		msg = msg.ReplyToMessage
+	}
+
+	text := telegram.ExtractSaveTextFromMessage(msg)
+	if len(replyText) != 0 {
+		text = text + telegram.JoinSeparator + replyText
+	}
+
+	tags := telegram.ExtractTags(msg)
+	if len(replyTags) != 0 {
+		tags = append(tags, replyTags...)
+	}
+
 	entry := &Entry{
 		Message: &Message{
 			ID:     upd.ID,
 			Nonce:  msg.ID,
 			Date:   msg.Date,
 			Action: ActionSave,
+			Text:   text,
+			Tags:   tags,
 		},
 		Chat: &Chat{
 			ID:        msg.Chat.ID,
@@ -102,19 +123,8 @@ func NewEntry(upd *telegram.Update) *Entry {
 		},
 	}
 
-	if len(msg.Text) != 0 {
-		entry.Message.Text = msg.Text
-	} else {
-		if msg.ForwardFromChat != nil && msg.ForwardFromChat.Type == telegram.ChatTypeChannel {
-			entry.Message.Text = telegram.CreateChannelPostLink(msg.ForwardFromChat, msg.ForwardFromMessageID)
-		}
-	}
-
-	entry.Message.Tags = make([]string, 0)
 	for _, e := range msg.Entities {
-		if e.Type == telegram.EntityTypeHashtag {
-			entry.Message.Tags = append(entry.Message.Tags, msg.Text[e.Offset:e.Offset+e.Length])
-		} else if e.Type == telegram.EntityTypeBotCommand {
+		if e.Type == telegram.EntityTypeBotCommand {
 			// bot command looks like `/command@NameBot`
 			// so we split string by @ and then take first segment from second letter to the end
 			parts := strings.Split(upd.Message.Text[e.Offset:e.Offset+e.Length], "@")

@@ -7,6 +7,7 @@ type Bot interface {
 	SendMessage(string) (int64, error)
 	EditMessage(int64, string) error
 	ForwardMessage(int64, int64) error
+	ReplyMessage(string, int64, int64) error
 }
 
 func NewBot(token string) (Bot, error) {

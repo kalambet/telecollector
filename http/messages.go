@@ -69,7 +69,6 @@ func (s *server) handleMessage(entry *telecollector.Entry) http.HandlerFunc {
 			//	}
 			//	break
 			//}
-
 		}
 
 		s.respond(w, http.StatusOK, "OK")
