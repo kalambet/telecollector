@@ -26,7 +26,6 @@ func Shutdown() error {
 
 func gracefulCreateTable(table string, query string) error {
 	rows, err := db.Query(queryTableExistence, table)
-	defer rows.Close()
 
 	if err != nil {
 		return err
@@ -37,8 +36,11 @@ func gracefulCreateTable(table string, query string) error {
 		err = rows.Scan(&exists)
 		if !exists || err == sql.ErrNoRows {
 			rows, err := db.Query(query)
-			defer rows.Close()
+			if err != nil {
+				return err
+			}
 
+			err = rows.Close()
 			if err != nil {
 				return err
 			}
@@ -46,6 +48,11 @@ func gracefulCreateTable(table string, query string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	err = rows.Close()
+	if err != nil {
+		return err
 	}
 
 	return nil

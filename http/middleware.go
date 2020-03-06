@@ -12,10 +12,6 @@ import (
 	"github.com/kalambet/telecollector/telegram"
 )
 
-const (
-	ContextKeyEntry = "entry_context"
-)
-
 func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -37,12 +33,6 @@ func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		entry := telecollector.NewEntry(&upd)
-		if entry == nil {
-			s.respond(w, http.StatusOK, "Not applicable")
-			return
-		}
-
 		var ctx context.Context
 		if r.Context() != nil {
 			ctx = r.Context()
@@ -50,7 +40,7 @@ func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 			ctx = context.Background()
 		}
 
-		ctx = context.WithValue(ctx, ContextKeyEntry, entry)
+		ctx = context.WithValue(ctx, ContextKeyUpdate, &upd)
 		r = r.WithContext(ctx)
 
 		if next != nil {
@@ -59,15 +49,15 @@ func (s *server) buildContext(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *server) onlyAdmin(next http.HandlerFunc) http.HandlerFunc {
+func (s *server) onlyAdminCommand(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		entry, ok := r.Context().Value(ContextKeyEntry).(*telecollector.Entry)
+		ctxVal, ok := r.Context().Value(ContextKeyCommand).(*telecollector.CommandContext)
 		if !ok {
-			s.respond(w, http.StatusNotAcceptable, "Sent entity is not entry")
+			s.respond(w, http.StatusNotAcceptable, "Command context is invalid")
 			return
 		}
 
-		if !s.credService.CheckAdmin(entry.Author.ID) {
+		if !s.credService.CheckAdmin(ctxVal.Message.From.ID) {
 			s.respond(w, http.StatusNotAcceptable, "Sent entry is not from authorized admin")
 			return
 		}
@@ -80,13 +70,13 @@ func (s *server) onlyAdmin(next http.HandlerFunc) http.HandlerFunc {
 
 func (s *server) onlyWhitelistedChats(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		entry, ok := r.Context().Value(ContextKeyEntry).(*telecollector.Entry)
+		ctxVal, ok := r.Context().Value(ContextKeyMessage).(*telecollector.MessageContext)
 		if !ok {
-			s.respond(w, http.StatusNotAcceptable, "Sent entity is not entry")
+			s.respond(w, http.StatusNotAcceptable, "Message context is invalid")
 			return
 		}
 
-		if !s.credService.CheckChat(entry.Chat.ID) {
+		if !s.credService.CheckChat(ctxVal.Message.Chat.ID) {
 			s.respond(w, http.StatusNotAcceptable, "Sent entry is not from followed chat")
 			return
 		}

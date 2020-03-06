@@ -22,6 +22,14 @@ var (
 	ErrTGTokenEmpty = errors.New("server: telegram token is empty")
 )
 
+const (
+	ContextKeyUpdate  ContextKey = "update_context"
+	ContextKeyMessage ContextKey = "message_context"
+	ContextKeyCommand ContextKey = "command_context"
+)
+
+type ContextKey string
+
 type server struct {
 	port        int
 	router      *http.ServeMux

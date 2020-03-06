@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kalambet/telecollector/telegram"
+
 	"github.com/kalambet/telecollector/telecollector"
 )
 
@@ -14,20 +16,19 @@ const (
 	createAllowances = `
 create table allowances(
     chat_id bigint, 
-    author_id bigint,
     modified date,
     follow bool, 
     primary key(chat_id)
 );`
 
-	queryAllowances = `select chat_id, author_id, follow from allowances;`
+	queryAllowances = `select chat_id, follow from allowances;`
 
 	insertAllowance = `
 insert into 
-    allowances (chat_id, author_id, follow, modified) 
-    values ($1, $2, $3, $4) 
+    allowances (chat_id, follow, modified) 
+    values ($1, $2, $3) 
         on conflict (chat_id) 
-        do update set author_id = $2, follow = $3, modified = $4;`
+        do update set follow = $2, modified = $3;`
 )
 
 type credentialsService struct {
@@ -57,7 +58,6 @@ func NewCredentialService() (telecollector.CredentialService, error) {
 
 func (cs *credentialsService) loadAllowances() error {
 	rows, err := db.Query(queryAllowances)
-	defer rows.Close()
 
 	if err != nil {
 		return err
@@ -66,14 +66,14 @@ func (cs *credentialsService) loadAllowances() error {
 	cs.Allowances = make(map[int64]*telecollector.Allowance)
 	for rows.Next() {
 		a := telecollector.Allowance{}
-		if err := rows.Scan(&a.ChatID, &a.AuthorID, &a.Follow); err != nil {
+		if err := rows.Scan(&a.ChatID, &a.Follow); err != nil {
 			log.Printf("postgres: error unmarshaling allowance query result: %s", err.Error())
 			continue
 		}
 		cs.Allowances[a.ChatID] = &a
 	}
 
-	return nil
+	return rows.Close()
 }
 
 func (cs *credentialsService) loadAdmins() error {
@@ -111,16 +111,18 @@ func (cs *credentialsService) CheckChat(chatID int64) bool {
 	return ok && a.Follow
 }
 
-func (cs *credentialsService) FollowChat(a *telecollector.Allowance) error {
-	_, ok := cs.Allowances[a.ChatID]
+func (cs *credentialsService) FollowChat(chat *telegram.Chat, follow bool) error {
+	_, ok := cs.Allowances[chat.ID]
 	if ok {
-		cs.Allowances[a.ChatID].Follow = a.Follow
-		cs.Allowances[a.ChatID].AuthorID = a.AuthorID
+		cs.Allowances[chat.ID].Follow = follow
 	} else {
-		cs.Allowances[a.ChatID] = a
+		cs.Allowances[chat.ID] = &telecollector.Allowance{
+			ChatID: chat.ID,
+			Follow: follow,
+		}
 	}
 
-	_, err := db.Exec(insertAllowance, &a.ChatID, &a.AuthorID, &a.Follow, time.Now())
+	_, err := db.Exec(insertAllowance, &chat.ID, &follow, time.Now())
 	if err != nil {
 		return err
 	}

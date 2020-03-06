@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/kalambet/telecollector/telegram"
+
 	"github.com/kalambet/telecollector/telecollector"
 	"github.com/lib/pq"
 )
@@ -12,14 +14,14 @@ import (
 const (
 	createMessage = `
 create table messages(
-    message_id bigint,
-	nonce int,
+    update_id bigint unique,
+	message_id bigint,
     chat_id bigint, 
     author_id bigint,
     date bigint, 
     text text not null, 
     tags text[] not null default '{}', 
-    primary key(chat_id, message_id)
+    primary key(message_id, chat_id)
 );`
 
 	createAuthors = `
@@ -39,11 +41,14 @@ create table chats(
 
 	createBroadcast = `
 create table broadcasts(
-    update_id bigint primary key, 
-    message_id bigint 
+    message_id bigint,
+	chat_id bigint,
+    broadcast_id bigint,
+	primary key(message_id, chat_id)
 );`
 
-	queryMessagesExistence = `select exists (select from messages where message_id = $1 and chat_id = $2 and author_id = $3 and date = $4);`
+	queryMessagesExistence = `
+select exists (select from messages where message_id = $1 and chat_id = $2 and author_id = $3 and date = $4);`
 
 	insertChat = `
 insert into 
@@ -59,27 +64,26 @@ insert into
 
 	insertMessage = `
 insert into 
-    messages (message_id, nonce, chat_id, author_id, date, text, tags) 
+    messages (update_id, message_id, chat_id, author_id, date, text, tags) 
     values ($1, $2, $3, $4, $5, $6, $7) 
     on conflict (message_id, chat_id) 
-        do nothing returning text;`
+        do update set date = $5, text = $6, tags = $7 returning text;`
 
 	appendMessage = `
 insert into 
-    messages (message_id, nonce, chat_id, author_id, date, text, tags) 
+    messages (update_id, message_id, chat_id, author_id, date, text, tags) 
     values ($1, $2, $3, $4, $5, $6, $7) 
     on conflict (message_id, chat_id) 
-        do update set date = $5, text = messages.text || ' ➜ ' || $6, tags = $7 returning text;`
+        do update set date = $5, text = messages.text || ' ➜ ' || $6 returning text;`
 
 	insertBroadcast = `
 insert into
-	broadcasts (update_id, message_id)
-	values ($1, $2)
-	on conflict (update_id)
-		do update set message_id = $2;
-`
+	broadcasts (message_id, chat_id, broadcast_id)
+	values ($1, $2, $3)
+	on conflict (message_id, chat_id)
+		do update set broadcast_id = $3;`
 
-	queryBroadcast = `select message_id from broadcasts where update_id = $1;`
+	queryBroadcast = `select broadcast_id from broadcasts where message_id = $1 and chat_id = $2;`
 )
 
 type messagesService struct{}
@@ -109,35 +113,37 @@ func NewMessagesService() (*messagesService, error) {
 	return &messagesService{}, nil
 }
 
-func (s *messagesService) Save(entity *telecollector.Entry) (string, error) {
+func (s *messagesService) Save(ctx *telecollector.MessageContext) (string, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return "", err
 	}
 
-	_, err = tx.Exec(insertChat, entity.Chat.ID, entity.Chat.Messenger, entity.Chat.Name)
+	_, err = tx.Exec(insertChat, ctx.Message.Chat.ID, "Telegram", ctx.Message.Chat.Title)
 
 	if err != nil {
 		return "", rollback(tx, err)
 	}
 
-	_, err = tx.Exec(insertAuthor,
-		entity.Author.ID, entity.Author.First, entity.Author.Last, entity.Author.Username)
+	_, err = tx.Exec(insertAuthor, ctx.Message.From.ID, ctx.Message.From.FirstName, ctx.Message.From.LastName, ctx.Message.From.UserName)
 
 	if err != nil {
 		return "", rollback(tx, err)
 	}
 
-	var rows *sql.Rows
-	if entity.Message.Action == telecollector.ActionAppend {
-		rows, err = tx.Query(appendMessage,
-			entity.Message.ID, entity.Message.Nonce, entity.Chat.ID, entity.Author.ID,
-			entity.Message.Date, entity.Message.Text, pq.Array(entity.Message.Tags))
+	var query string
+	var msgID int64
+	if ctx.Action == telecollector.ActionAppend {
+		query = appendMessage
+		msgID = ctx.ConnectedMessageID
 	} else {
-		rows, err = tx.Query(insertMessage,
-			entity.Message.ID, entity.Message.Nonce, entity.Chat.ID, entity.Author.ID,
-			entity.Message.Date, entity.Message.Text, pq.Array(entity.Message.Tags))
+		query = insertMessage
+		msgID = ctx.Message.ID
 	}
+
+	rows, err := tx.Query(query,
+		ctx.UpdateID, msgID, ctx.Message.Chat.ID, ctx.Message.Author().ID,
+		ctx.Message.Date, ctx.Message.Text2Save(), pq.Array(ctx.Message.Tags()))
 
 	if err != nil {
 		return "", rollback(tx, err)
@@ -147,8 +153,7 @@ func (s *messagesService) Save(entity *telecollector.Entry) (string, error) {
 	if rows.Next() {
 		err = rows.Scan(&text)
 		if err != nil {
-			log.Printf("postgres: erorr decoding resulting text: %s", err.Error())
-			text = ""
+			return "", err
 		}
 	}
 
@@ -160,9 +165,8 @@ func (s *messagesService) Save(entity *telecollector.Entry) (string, error) {
 	return text, tx.Commit()
 }
 
-func (s *messagesService) CheckConnected(entry *telecollector.Entry) (bool, error) {
-	rows, err := db.Query(queryMessagesExistence, entry.Message.ID-1, entry.Chat.ID, entry.Author.ID, entry.Message.Date)
-	defer rows.Close()
+func (s *messagesService) CheckConnected(msg *telegram.Message) (bool, error) {
+	rows, err := db.Query(queryMessagesExistence, msg.ID-1, msg.Chat.ID, msg.Author().ID, msg.Date)
 
 	if err != nil {
 		return false, err
@@ -178,11 +182,16 @@ func (s *messagesService) CheckConnected(entry *telecollector.Entry) (bool, erro
 		return exists, nil
 	}
 
+	err = rows.Close()
+	if err != nil {
+		return false, err
+	}
+
 	return false, nil
 }
 
-func (s *messagesService) LogBroadcast(updateID int64, messageID int64) error {
-	_, err := db.Exec(insertBroadcast, updateID, messageID)
+func (s *messagesService) LogBroadcast(msg *telegram.Message, bcID int64) error {
+	_, err := db.Exec(insertBroadcast, msg.ID, msg.Chat.ID, bcID)
 	if err != nil {
 		return err
 	}
@@ -190,22 +199,26 @@ func (s *messagesService) LogBroadcast(updateID int64, messageID int64) error {
 	return nil
 }
 
-func (s *messagesService) FindBroadcast(updateID int64) (int64, error) {
-	rows, err := db.Query(queryBroadcast, updateID)
-	defer rows.Close()
+func (s *messagesService) FindBroadcast(msgID int64, chatID int64) (int64, error) {
+	rows, err := db.Query(queryBroadcast, msgID, chatID)
 
 	if err != nil {
 		return 0, err
 	}
 
 	if rows.Next() {
-		var msgID int64
-		err = rows.Scan(&msgID)
+		var bcID int64
+		err = rows.Scan(&bcID)
 		if err != nil {
 			return 0, nil
 		}
 
-		return msgID, nil
+		return bcID, nil
+	}
+
+	err = rows.Close()
+	if err != nil {
+		return 0, err
 	}
 
 	return 0, nil

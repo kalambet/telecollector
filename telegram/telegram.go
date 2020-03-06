@@ -153,7 +153,7 @@ type Update struct {
 	PollAnswer         *PollAnswer         `json:"poll_answer,omitempty"`
 }
 
-func ExtractSaveTextFromMessage(msg *Message) string {
+func (msg *Message) Text2Save() string {
 	texts := make([]string, 0)
 	if len(msg.Text) != 0 {
 		texts = append(texts, msg.Text)
@@ -174,7 +174,7 @@ func ExtractSaveTextFromMessage(msg *Message) string {
 	return strings.Join(texts, JoinSeparator)
 }
 
-func ExtractTags(msg *Message) []string {
+func (msg *Message) Tags() []string {
 	tags := make([]string, 0)
 	for _, e := range msg.Entities {
 		if e.Type == EntityTypeHashtag {
@@ -182,4 +182,46 @@ func ExtractTags(msg *Message) []string {
 		}
 	}
 	return tags
+}
+
+func (msg *Message) Command() (string, string) {
+	for _, e := range msg.Entities {
+		if e.Type == EntityTypeBotCommand {
+			// in channels bot command looks like `/command@NameBot`
+			// so we split string by @ and then take first segment from second letter to the end
+			parts := strings.Split(msg.Text[e.Offset:e.Offset+e.Length], "@")
+			var receiver string
+			// It could be direct command not in chat
+			if len(parts) == 1 {
+				receiver = ""
+			} else {
+				receiver = parts[len(parts)-1]
+			}
+			return parts[0][1:], receiver
+		}
+	}
+
+	return "", ""
+}
+
+func (msg *Message) Author() *User {
+	if msg.From == nil {
+		return &User{
+			ID:        0,
+			FirstName: msg.Chat.Title,
+			LastName:  "",
+			UserName:  msg.Chat.UserName,
+		}
+	}
+
+	return msg.From
+}
+
+func (user *User) ComposeWhoAmIMessage() string {
+	return fmt.Sprintf(
+		"*Name*: %s %s\n*Username*: %s\n*ID*:%d",
+		user.FirstName,
+		user.LastName,
+		user.UserName,
+		user.ID)
 }

@@ -16,6 +16,7 @@ var (
 		"sendMessage":     http.MethodPost,
 		"editMessageText": http.MethodPost,
 		"forwardMessage":  http.MethodPost,
+		"deleteMessage":   http.MethodPost,
 	}
 )
 
@@ -119,7 +120,11 @@ func (b *Bot) SendMessage(text string) (int64, error) {
 	return respMsg.ID, nil
 }
 
-func (b *Bot) ReplyMessage(text string, chatID int64, messageID int64) error {
+func (b *Bot) ReplyBroadcast(text string, msgID int64) (int64, error) {
+	return b.ReplyMessage(text, b.channel, msgID)
+}
+
+func (b *Bot) ReplyMessage(text string, chatID int64, msgID int64) (int64, error) {
 	msg := struct {
 		ChatId           int64  `json:"chat_id"`
 		Text             string `json:"text"`
@@ -127,27 +132,27 @@ func (b *Bot) ReplyMessage(text string, chatID int64, messageID int64) error {
 	}{
 		ChatId:           chatID,
 		Text:             text,
-		ReplyToMessageID: messageID,
+		ReplyToMessageID: msgID,
 	}
 
 	body, err := json.Marshal(&msg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	log.Printf("Reply Message: %s", body)
 
 	resp, err := b.apiRequest("sendMessage", body)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	respMsg := Message{}
 	err = json.Unmarshal(resp, &respMsg)
 	if err != nil {
-		return nil
+		return 0, nil
 	}
 
-	return nil
+	return respMsg.ID, nil
 }
 
 func (b *Bot) EditMessage(msgID int64, text string) error {
@@ -169,25 +174,19 @@ func (b *Bot) EditMessage(msgID int64, text string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Send Message: %s", body)
+	log.Printf("Edit Message: %s", body)
 
-	resp, err := b.apiRequest("editMessageText", body)
+	_, err = b.apiRequest("editMessageText", body)
 	if err != nil {
 		return err
-	}
-
-	respMsg := Message{}
-	err = json.Unmarshal(resp, &respMsg)
-	if err != nil {
-		return nil
 	}
 
 	return nil
 }
 
-func (b *Bot) ForwardMessage(chatID int64, msgID int64) error {
+func (b *Bot) ForwardMessage(chatID int64, msgID int64) (int64, error) {
 	if b.channel == 0 {
-		return nil
+		return 0, nil
 	}
 
 	msg := struct {
@@ -202,20 +201,49 @@ func (b *Bot) ForwardMessage(chatID int64, msgID int64) error {
 
 	body, err := json.Marshal(&msg)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	log.Printf("Send Message: %s", body)
+	log.Printf("Forward Message: %s", body)
 
 	resp, err := b.apiRequest("forwardMessage", body)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	respMsg := Message{}
 	err = json.Unmarshal(resp, &respMsg)
 	if err != nil {
+		return 0, nil
+	}
+
+	return respMsg.ID, nil
+}
+
+func (b *Bot) DeleteMessage(msgID int64) error {
+	if b.channel == 0 {
 		return nil
 	}
+
+	msg := struct {
+		ChatId int64 `json:"chat_id"`
+		MsgID  int64 `json:"message_id"`
+	}{
+		ChatId: b.channel,
+		MsgID:  msgID,
+	}
+
+	body, err := json.Marshal(&msg)
+	if err != nil {
+		return err
+	}
+	log.Printf("Forward Message: %s", body)
+
+	resp, err := b.apiRequest("deleteMessage", body)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Delete Response: %s", resp)
 
 	return nil
 }
